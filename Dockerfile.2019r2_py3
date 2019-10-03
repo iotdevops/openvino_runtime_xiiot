@@ -1,0 +1,48 @@
+# OpenVINO runtime for XiIoT with OpenVINO 2019 R2 and Python 3 (CPU only)
+
+FROM ubuntu:18.04
+RUN apt-get update && apt-get install -y --no-install-recommends \
+            ca-certificates \
+            curl \
+            libgomp1 \
+            python3-dev \
+            python3-pip \
+            virtualenv \
+            usbutils \
+            gnupg2
+
+RUN curl  https://apt.repos.intel.com/openvino/2019/GPG-PUB-KEY-INTEL-OPENVINO-2019 -o GPG-PUB-KEY-INTEL-OPENVINO-2019
+RUN apt-key add GPG-PUB-KEY-INTEL-OPENVINO-2019
+RUN echo "deb https://apt.repos.intel.com/openvino/2019/ all main" > /etc/apt/sources.list.d/intel-openvino-2019.list
+RUN apt-get update && apt-get install -y intel-openvino-dev-ubuntu18-2019.2.242
+
+ENV PYTHONPATH="/opt/intel/openvino/python/python3.6"
+ENV LD_LIBRARY_PATH="/opt/intel/openvino/deployment_tools/inference_engine/external/tbb/lib:/opt/intel/openvino/deployment_tools/inference_engine/external/mkltiny_lnx/lib:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64"
+
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN ln -s /usr/bin/pip3 /usr/bin/pip
+
+# Check Python version
+RUN python -V
+RUN python -c 'import sys; sys.exit(sys.version_info.major != 3)'
+
+# Python runtime environment to execute Python functions
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        wget
+
+RUN wget https://s3-us-west-2.amazonaws.com/ntnxsherlock-runtimes/python-env.tgz
+RUN tar xf /python-env.tgz
+
+# Pull in additional packages or dependencies
+RUN pip install setuptools 
+RUN pip install -r /python-env/requirements.txt
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-opencv
+
+# Mandating all runtime containers to run as user 10001
+USER 10001
+
+# Run Python function worker which pull and executes functions
+CMD ["/python-env/run.sh"]
+  
